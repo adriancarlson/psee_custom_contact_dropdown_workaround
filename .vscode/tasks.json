@@ -1,0 +1,26 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "buildplugin",
+      "type": "process",
+      "command": "py",
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "args": [
+        "${workspaceFolder}/../../pluginpack.py",
+        "--input",
+        ".",
+        "--with-version",
+        "--mask",
+        "^(?!(?:\\.[/\\\\])?(?:plugin\\.xml$|web_root(?:[/\\\\]|$)))"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    }
+  ]
+}
