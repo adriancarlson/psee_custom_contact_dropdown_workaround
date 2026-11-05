@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<plugin xmlns="http://plugin.powerschool.pearson.com" name="PSEE Custom Contact Dropdown Workaround" version="26.10.1" description="Store codeset codes for configured Enrollment Express contact extension dropdowns.">
+<plugin xmlns="http://plugin.powerschool.pearson.com" name="PSEE Custom Contact Dropdown Workaround" version="26.11" description="Store codeset codes for configured Enrollment Express contact extension dropdowns.">
     <publisher name="Adrian Carlson">
         <contact email="adrian-carlson@cdolinc.net"/>
     </publisher>

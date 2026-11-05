@@ -48,7 +48,7 @@ Rollback: disable this plugin. PowerSchool Enrollment Express's original dropdow
 Edit the `fields` array at the beginning of `web_root/scripts/formbuilder/modules/cdol_contact_codes.js`. Entries use `TABLE.COLUMN` and identify only text extension columns that should store codes:
 
 ```js
-const fields = ['U_PERSON_ADDITIONAL_INFO.PERSON_RELIGION', 'U_PERSON_ADDITIONAL_INFO.PERSON_PARISH_STATE']
+const fields = ['U_PERSON_ADDITIONAL_INFO.PERSON_RELIGION', 'U_PERSON_ADDITIONAL_INFO.PERSON_PARISH_STATE', 'U_PERSON_ADDITIONAL_INFO.PERSON_EMPLOYER_STATE']
 ```
 
 Replace these district-specific table and column names with your own. Use the table and extension identifiers configured in the custom contact layout. Do not add native ID-based fields, such as Gender, Relationship, Prefix, or Suffix, or extension columns intended to store codeset IDs.

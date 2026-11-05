@@ -3,7 +3,8 @@
     "use strict";
     const fields = [
         "U_PERSON_ADDITIONAL_INFO.PERSON_RELIGION",
-        "U_PERSON_ADDITIONAL_INFO.PERSON_PARISH_STATE"
+        "U_PERSON_ADDITIONAL_INFO.PERSON_PARISH_STATE",
+        "U_PERSON_ADDITIONAL_INFO.PERSON_EMPLOYER_STATE"
     ];
     let registered = false;
 

@@ -12,11 +12,12 @@ A PowerSchool code-set option has several distinct properties:
 | `code`         | The value intended for code-based storage | `NE`             |
 | `displayvalue` | The label presented to the user           | `Nebraska`       |
 
-The two custom contact fields should store the **code**:
+The configured custom contact fields should store the **code**:
 
 ```text
 U_PERSON_ADDITIONAL_INFO.PERSON_RELIGION
 U_PERSON_ADDITIONAL_INFO.PERSON_PARISH_STATE
+U_PERSON_ADDITIONAL_INFO.PERSON_EMPLOYER_STATE
 ```
 
 However, the custom contact dropdown in PowerSchool Enrollment Express used `option.codesetid` for both its option values and its selection comparison. Its behavior was effectively:
@@ -176,7 +177,7 @@ This timing allows the correction to work without adding code inside PowerSchool
 The field configuration is at the beginning of the JavaScript file:
 
 ```js
-const fields = ['U_PERSON_ADDITIONAL_INFO.PERSON_RELIGION', 'U_PERSON_ADDITIONAL_INFO.PERSON_PARISH_STATE']
+const fields = ['U_PERSON_ADDITIONAL_INFO.PERSON_RELIGION', 'U_PERSON_ADDITIONAL_INFO.PERSON_PARISH_STATE', 'U_PERSON_ADDITIONAL_INFO.PERSON_EMPLOYER_STATE']
 ```
 
 Another district can replace those entries with its own `TABLE.COLUMN` names.

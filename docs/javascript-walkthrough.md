@@ -35,7 +35,7 @@ That matters because PowerSchool Enrollment Express and other installed plugins 
 Near the top:
 
 ```js
-const fields = ['U_PERSON_ADDITIONAL_INFO.PERSON_RELIGION', 'U_PERSON_ADDITIONAL_INFO.PERSON_PARISH_STATE']
+const fields = ['U_PERSON_ADDITIONAL_INFO.PERSON_RELIGION', 'U_PERSON_ADDITIONAL_INFO.PERSON_PARISH_STATE', 'U_PERSON_ADDITIONAL_INFO.PERSON_EMPLOYER_STATE']
 ```
 
 This array is the script's configuration.
@@ -62,6 +62,7 @@ For a Parish State field, it constructs:
 
 ```text
 U_PERSON_ADDITIONAL_INFO.PERSON_PARISH_STATE
+U_PERSON_ADDITIONAL_INFO.PERSON_EMPLOYER_STATE
 ```
 
 Then `indexOf()` searches the configuration array.
@@ -440,7 +441,7 @@ The replacement's central expression is:
 configuredField ? option.code : option.codesetid
 ```
 
-For Religion and Parish State, it uses `option.code`.
+For Religion, Parish State, and Employer State, it uses `option.code`.
 
 For unrelated fields, it retains `option.codesetid`.
 
