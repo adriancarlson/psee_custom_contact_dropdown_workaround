@@ -45,9 +45,13 @@
         return asArray(contact && contact.extensions).find((table) => table.extensionname === relationshipExtension);
     }
 
+    function isNewContact(contact) {
+        return contact && contact.status === "new" && !contact.id;
+    }
+
     function relationshipChanges(contact) {
         const submitted = submittedFlags(contact);
-        if (!submitted || contact.status === "deleted" || !/^\d+$/.test(contact.id)) { return []; }
+        if (!submitted || contact.status === "deleted" || (!isNewContact(contact) && !/^\d+$/.test(contact.id))) { return []; }
         return relationshipFlags.flatMap(({ name }) => {
             const value = flagValue(submitted.fields, name);
             return value === undefined ? [] : [{ name, type: "Boolean", value: String(value) }];
@@ -96,7 +100,7 @@
     function addRelationshipControls(html) {
         if (html.includes("cdolSetRelationshipFlag")) { return html; }
         const mailRow = /(<td id="receivesmailflgCol"[\s\S]*?<\/td>\s*<\/tr>)/;
-        const disabled = "!hasPermission() || !elementPermission(element.elementpermission) || element.isConditionalUpdateOfNonCustodialContact";
+        const disabled = "!hasPermission() || !elementPermission(element.elementpermission)";
         const messages = "eec.html.scripts_formbuilder_partials_dialogs.responder_contactdetail.addcontact_recievesmail";
         return html.replace(mailRow, (row) => row + relationshipFlags.map(({ name, label }) => `
             <tr style="display: block; padding-top: 10px !important; padding-bottom: 10px !important;"
@@ -119,6 +123,7 @@
     }
 
     function mergeRelationshipFlags(associations, contact, student) {
+        if (isNewContact(contact)) { return; }
         const flags = relationshipChanges(contact);
         if (!flags.length || !student) { return; }
         const association = asArray(associations).find((item) => String(item.dcid) === student);
@@ -144,12 +149,45 @@
         detail.contactStudentDetailExtension = extension;
     }
 
+    function readStudentContacts($http, student) {
+        return $http.get(`/ws/contacts/student/${student}?extensions=${relationshipExtension}`, { cache: false })
+            .then(({ data }) => {
+                if (!Array.isArray(data)) { throw new Error("PowerSchool did not return the student contacts."); }
+                return data;
+            });
+    }
+
+    function studentRelationships(contacts, student) {
+        return contacts.flatMap((contact) => asArray(contact.contactStudents)
+            .filter((association) => association.studentContactId && !association.deleted && String(association.dcid) === student)
+            .map((association) => ({ contact, association })));
+    }
+
+    function newRelationship(before, after, draft, selectedId) {
+        const known = new Set(before.map(({ association }) => String(association.studentContactId)));
+        const normalize = (value) => String(value || "").trim().toLowerCase();
+        const candidates = after.filter(({ contact, association }) => {
+            if (known.has(String(association.studentContactId))) { return false; }
+            if (selectedId) { return String(contact.contactId) === selectedId; }
+            return String(association.sequence) === String(draft.contactpriorityorder) &&
+                normalize(contact.firstName) === normalize(draft.firstname) &&
+                normalize(contact.middleName) === normalize(draft.middlename) &&
+                normalize(contact.lastName) === normalize(draft.lastname);
+        });
+        if (candidates.length !== 1) { throw new Error("Could not identify the newly created student-contact relationship."); }
+        const { contact, association } = candidates[0];
+        const details = asArray(association.studentDetails).filter((detail) =>
+            detail.active && !detail.deleted && detail.studentContactDetailId);
+        if (details.length !== 1) { throw new Error("Could not identify the new relationship detail."); }
+        return { contactId: contact.contactId, association, detailId: details[0].studentContactDetailId };
+    }
+
     function verifyRelationshipWrite($http, form, contactId, association, write) {
         const { detailId, flags } = write;
         function readRelationship() {
-            return $http.get(`/ws/contacts/student/${association.dcid}?extensions=${relationshipExtension}`, { cache: false })
-                .then(({ data }) => {
-                    const contact = asArray(data).find((item) => String(item.contactId) === String(contactId));
+            return readStudentContacts($http, association.dcid)
+                .then((data) => {
+                    const contact = data.find((item) => String(item.contactId) === String(contactId));
                     const current = asArray(contact && contact.contactStudents).find((item) =>
                         item.studentContactId && (!association.studentContactId ||
                             String(item.studentContactId) === String(association.studentContactId)) &&
@@ -226,6 +264,7 @@
                     const changes = asArray(element && element.contacts).flatMap((contact) => {
                         const flags = relationshipChanges(contact);
                         if (!flags.length) { return []; }
+                        if (isNewContact(contact)) { return [{ draft: contact, flags }]; }
                         const detail = relationshipDetails.get(relationshipKey(student, contact.id));
                         const reviewed = asArray(root.originalContactList).find((item) => String(item.id) === String(contact.id));
                         return [{ contactId: contact.id, detailId: detail && detail.id, flags, reviewed }];
@@ -236,23 +275,42 @@
                         status: 409,
                         data: { errorCode: 99, errorMessage, traceId: "" }
                     });
-                    if (!student || changes.some(({ contactId, detailId, reviewed }) => !detailId ||
+                    if (!student || changes.some(({ draft, contactId, detailId, reviewed }) => !draft && (!detailId ||
                         (reviewed && reviewed.status === "rowMatch" &&
-                            String(reviewed.selectedMatchedContactId) !== String(contactId)))) {
+                            String(reviewed.selectedMatchedContactId) !== String(contactId))))) {
                         return $q.when(failure("The submitted permissions could not be matched to their original student-contact relationship."));
                     }
 
-                    return upsert.apply(this, arguments).then((response) => {
+                    const hasNewContacts = changes.some(({ draft }) => draft);
+                    const before = hasNewContacts ? readStudentContacts($http, student) : $q.when([]);
+                    return before.then((previous) => upsert.apply(this, arguments).then((response) => {
                         if (response.status !== 200 || (response.data && response.data.errorCode !== undefined)) {
                             return response;
                         }
-                        // Sequence writes so approval cannot finish before all affected relationships are verified.
-                        return changes.reduce((pending, change) => pending.then(() =>
-                            verifyRelationshipWrite($http, form, change.contactId, { dcid: student }, change)
-                        ), $q.when()).then(() => response, () => failure(
-                            "PowerSchool could not verify the submitted Financially Responsible or School Messenger permissions. Check Student Contacts and retry approval."
-                        ));
-                    });
+                        const after = hasNewContacts ? readStudentContacts($http, student) : $q.when([]);
+                        return after.then((current) => {
+                            const beforeRelationships = studentRelationships(previous, student);
+                            const afterRelationships = studentRelationships(current, student);
+                            const targets = changes.map((change) => {
+                                if (!change.draft) { return { ...change, association: { dcid: student } }; }
+                                const prefix = `${change.draft.contactpriorityorder}-`;
+                                const match = asArray(payload.matchContactIds).find((id) => String(id).startsWith(prefix));
+                                return {
+                                    ...newRelationship(beforeRelationships, afterRelationships, change.draft, match && String(match).slice(prefix.length)),
+                                    flags: change.flags
+                                };
+                            });
+                            if (new Set(targets.map(({ detailId }) => String(detailId))).size !== targets.length) {
+                                throw new Error("Multiple submitted contacts resolved to the same relationship detail.");
+                            }
+                            // Sequence writes so approval cannot finish before all affected relationships are verified.
+                            return targets.reduce((pending, target) => pending.then(() =>
+                                verifyRelationshipWrite($http, form, target.contactId, target.association, target)
+                            ), $q.when()).then(() => response);
+                        });
+                    })).catch(() => failure(
+                        "PowerSchool could not verify the submitted Financially Responsible or School Messenger permissions. Check Student Contacts before retrying approval."
+                    ));
                 };
 
                 const create = form.createContactStudents;
@@ -319,7 +377,7 @@
                         link.apply(this, arguments);
                         const existingRelationship = (contact) => contact &&
                             relationshipDetails.get(relationshipKey(currentStudent(root), contact.id));
-                        scope.cdolCanEditRelationship = (contact) => Boolean(existingRelationship(contact));
+                        scope.cdolCanEditRelationship = (contact) => isNewContact(contact) || Boolean(existingRelationship(contact));
                         scope.cdolRelationshipValue = (contact, name) => {
                             const submitted = submittedFlags(contact);
                             const pending = submitted && flagValue(submitted.fields, name);
