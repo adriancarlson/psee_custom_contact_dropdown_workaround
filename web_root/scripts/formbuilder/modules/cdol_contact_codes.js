@@ -1,4 +1,4 @@
-/* Enrollment Express: store codes for the configured contact extension dropdowns. */
+/* Enrollment Express contact dropdown and card customizations. */
 (function () {
     "use strict";
     const fields = [
@@ -10,6 +10,18 @@
 
     function applies(field) {
         return field && fields.indexOf(`${field.tableName}.${String(field.columnName).toUpperCase()}`) !== -1;
+    }
+
+    function addMailingPermission(html) {
+        if (html.includes("statusChangeClass(contact.receivesmailflg)")) { return html; }
+
+        // Insert after Emergency Contact in both the standard and custom card layouts.
+        const emergencyContactRow = /<div\s+style="height: 25px !important;">\s*<span class="contactSpan" ng-class="statusChangeClass\(contact\.isemergency\)"><\/span>[\s\S]*?<\/div>/g;
+        return html.replace(emergencyContactRow, (row) => `${row}
+            <div style="height: 25px !important;">
+                <span class="contactSpan" ng-class="statusChangeClass(contact.receivesmailflg)" role="img" aria-label="{{contact.receivesmailflg == 1 ? 'Yes' : 'No'}}"></span>
+                <label class="contactLabel">{{commonMessageKeys['eec.html.scripts_formbuilder_partials_dialogs.responder_contactdetail.addcontact_recievesmail'] || 'Receives Mailings'}}</label>
+            </div>`);
     }
 
     function configure() {
@@ -54,7 +66,13 @@
             $provide.decorator("$templateRequest", ["$delegate", "$templateCache", function (load, cache) {
                 function request(url, ignoreError) {
                     return load(url, ignoreError).then((html) => {
-                        if (String(url).split("?")[0] !== "/scripts/formbuilder/partials/dialogs/responder.customcontactdetail.html") { return html; }
+                        const path = String(url).split("?")[0];
+                        if (path === "/scripts/formbuilder/partials/elements/contacts.element.html") {
+                            const updated = addMailingPermission(html);
+                            cache.put(url, updated);
+                            return updated;
+                        }
+                        if (path !== "/scripts/formbuilder/partials/dialogs/responder.customcontactdetail.html") { return html; }
                         const model = "currentContact[field.tableName+'_'+field.columnName.toLowerCase()+'_id']";
                         const match = `${JSON.stringify(fields).replace(/"/g, "'")}.indexOf(field.tableName+'.'+field.columnName.toUpperCase()) !== -1`;
                         const value = `(${match}) ? option.code : option.codesetid`;

@@ -2,6 +2,8 @@
 
 A standalone PowerSchool Enrollment Express workaround that submits `codeset.code` for configured contact extension dropdowns while retaining PowerSchool Enrollment Express display labels.
 
+The plugin also displays **Receives Mailings** alongside the other contact card permissions, using the existing mailing flag and the form's built-in checkmark and crossed-circle icons.
+
 ## Documentation and package
 
 - [Original issue, solution, and package contents](docs/issue-and-solution.md)
