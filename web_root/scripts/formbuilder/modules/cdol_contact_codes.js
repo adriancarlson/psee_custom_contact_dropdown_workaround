@@ -8,7 +8,6 @@
     ];
     const relationshipExtension = "u_studentcontactdetail_cdol";
     const relationshipFlags = [
-        { name: "financiallyresponsibleflg", label: "Financially Responsible" },
         { name: "schoolmessengerflg", label: "School Messenger" }
     ];
     const relationshipDetails = new Map();
@@ -309,7 +308,7 @@
                             ), $q.when()).then(() => response);
                         });
                     })).catch(() => failure(
-                        "PowerSchool could not verify the submitted Financially Responsible or School Messenger permissions. Check Student Contacts before retrying approval."
+                        "PowerSchool could not verify the submitted School Messenger permission. Check Student Contacts before retrying approval."
                     ));
                 };
 
@@ -342,7 +341,7 @@
                                 status: 200,
                                 data: {
                                     status: "ERROR",
-                                    error_message: { error: "The contact was updated, but PowerSchool could not verify the Financially Responsible and School Messenger permissions. Check Student Contacts and retry approval." }
+                                    error_message: { error: "The contact was updated, but PowerSchool could not verify the School Messenger permission. Check Student Contacts and retry approval." }
                                 }
                             }));
                     });
